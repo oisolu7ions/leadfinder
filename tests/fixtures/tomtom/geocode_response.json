@@ -1,0 +1,15 @@
+{
+  "summary": {"query": "Charlotte, NC", "queryType": "NON_NEAR"},
+  "results": [
+    {
+      "type": "Geography",
+      "id": "US/NC/Charlotte",
+      "position": {"lat": 35.2271, "lon": -80.8431},
+      "address": {
+        "municipality": "Charlotte",
+        "countrySubdivision": "NC",
+        "countryCode": "US"
+      }
+    }
+  ]
+}

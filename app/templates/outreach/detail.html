@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "partials/ui/page_header.html" import page_header %}
+{% from "leads/partials/outreach_draft_card.html" import outreach_draft_card %}
+
+{% block title %}Draft #{{ draft.id }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+{% call page_header("Outreach Draft #" ~ draft.id, "Lead: " ~ lead.business_name ~ " · Review only — not sent") %}
+  <a class="btn btn-secondary" href="/outreach">All drafts</a>
+  <a class="btn btn-secondary" href="/leads/{{ lead.id }}">Lead detail</a>
+{% endcall %}
+
+{{ outreach_draft_card(draft, lead, show_actions=true) }}
+{% endblock %}

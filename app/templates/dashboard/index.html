@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% from "partials/ui/page_header.html" import page_header %}
+{% from "partials/ui/stat_card.html" import stat_card %}
+{% from "partials/ui/badge.html" import render_badge %}
+{% from "partials/ui/empty_state.html" import empty_state %}
+{% from "leads/partials/score_badge.html" import score_badge %}
+
+{% block title %}Lead Discovery Dashboard — {{ app_name }}{% endblock %}
+
+{% block content %}
+{% call page_header(
+  "Lead Discovery Dashboard",
+  "Review incoming leads, inspect web presence, and prioritize outreach."
+) %}
+    <a class="btn" href="/scans">Run Scan</a>
+    <form method="post" action="/leads/inspect-uninspected" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <input type="hidden" name="limit" value="25">
+      <input type="hidden" name="mode" value="queue">
+      <input type="hidden" name="next" value="/">
+      <button type="submit" class="btn btn-secondary">Queue Inspect Unreviewed</button>
+    </form>
+    <form method="post" action="/leads/score-unscored" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <input type="hidden" name="limit" value="50">
+      <input type="hidden" name="next" value="/">
+      <button type="submit" class="btn btn-secondary">Score Unscored</button>
+    </form>
+    <a class="btn btn-secondary" href="/exports">Export Leads</a>
+{% endcall %}
+
+<section class="stat-grid">
+  {{ stat_card("Total Leads", kpis.total_leads, href="/leads") }}
+  {{ stat_card("Uninspected", kpis.uninspected, href="/leads?inspected=no") }}
+  {{ stat_card("High Priority", kpis.high_priority, href="/leads?priority=high") }}
+  {{ stat_card("No Website", kpis.no_website, hint=kpis.social_only ~ " social-only inspected") }}
+  {{ stat_card("Completed Scans", kpis.recent_scans, href="/scans") }}
+  {% if kpis.drafts_ready > 0 %}
+  {{ stat_card("Drafts Ready", kpis.drafts_ready, href="/leads") }}
+  {% endif %}
+</section>
+
+{% if kpis.total_leads == 0 %}
+<section class="panel">
+  {{ empty_state("No leads yet. Run your first scan to discover local businesses with weak web presence.", "Run First Scan", "/scans") }}
+</section>
+{% else %}
+<div class="layout-2col">
+  <div class="layout-main">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Needs Review Queue</h2>
+        <a href="/leads?inspected=no">View all uninspected</a>
+      </div>
+      {% if needs_review %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Business</th>
+              <th>City</th>
+              <th>Category</th>
+              <th>Website</th>
+              <th>Inspection</th>
+              <th>Score</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lead in needs_review %}
+            {% set score = lead.scores[0] if lead.scores else none %}
+            {% set insp = lead.inspections[0] if lead.inspections else none %}
+            <tr>
+              <td><a href="/leads/{{ lead.id }}">{{ lead.business_name }}</a></td>
+              <td>{{ lead.city or "—" }}</td>
+              <td>{{ lead.category or "—" }}</td>
+              <td>{{ render_badge(ui.website_status_badge(lead, insp)) }}</td>
+              <td>{{ render_badge(ui.inspection_status_badge(lead, insp)) }}</td>
+              <td>{{ score_badge(score, priority_label_for(score)) }}</td>
+              <td class="col-actions"><a class="btn btn-sm btn-secondary" href="/leads/{{ lead.id }}">View</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="empty-state">All caught up — no leads need immediate review.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Recent Leads</h2>
+        <a href="/leads">View all</a>
+      </div>
+      {% if recent_leads %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Business</th><th>City</th><th>Category</th><th>Score</th><th>Updated</th></tr>
+          </thead>
+          <tbody>
+            {% for lead in recent_leads %}
+            {% set score = lead.scores[0] if lead.scores else none %}
+            <tr>
+              <td><a href="/leads/{{ lead.id }}">{{ lead.business_name }}</a></td>
+              <td>{{ lead.city or "—" }}</td>
+              <td>{{ lead.category or "—" }}</td>
+              <td>{{ score_badge(score, priority_label_for(score)) }}</td>
+              <td class="muted">{{ lead.updated_at.strftime("%Y-%m-%d %H:%M") if lead.updated_at else "—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="empty-state">No leads yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Recent Scan Jobs</h2>
+        <a href="/scans">View all</a>
+      </div>
+      {% if recent_scans %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Provider</th><th>Category / City</th><th>Status</th>
+              <th>Found</th><th>Inserted</th><th>Updated</th><th>Finished</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for scan in recent_scans %}
+            <tr>
+              <td>{{ scan.source_name }}</td>
+              <td>{{ scan.category }} · {{ scan.city }}{% if scan.state %}, {{ scan.state }}{% endif %}</td>
+              <td>{{ render_badge(ui.scan_status_badge(scan.status)) }}</td>
+              <td>{{ scan.total_found }}</td>
+              <td>{{ scan.total_inserted }}</td>
+              <td>{{ scan.total_updated }}</td>
+              <td class="muted">{{ scan.finished_at.strftime("%m/%d %H:%M") if scan.finished_at else "—" }}</td>
+              <td><a href="/scans/{{ scan.id }}">Details</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      {{ empty_state("No scan jobs yet.", "Run First Scan", "/scans") }}
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="layout-sidebar">
+    <section class="detail-card">
+      <div class="detail-card-header"><h2>Inspection Summary</h2></div>
+      <div class="detail-card-body">
+        <ul class="summary-list">
+          <li><span>Total inspections</span><span class="count">{{ inspection_summary.total }}</span></li>
+          <li><span>Reachable</span><span class="count">{{ inspection_summary.reachable }}</span></li>
+          <li><span>Unreachable</span><span class="count">{{ inspection_summary.unreachable }}</span></li>
+          <li><span>Social only</span><span class="count">{{ inspection_summary.social_only }}</span></li>
+          <li><span>With errors</span><span class="count">{{ inspection_summary.with_errors }}</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="detail-card">
+      <div class="detail-card-header"><h2>Background Queue</h2></div>
+      <div class="detail-card-body">
+        <ul class="summary-list">
+          <li><span>Pending jobs</span><span class="count">{{ queue_stats.total }}</span></li>
+          <li><span>Unified queue</span><span class="count">{{ queue_stats.unified_queue }}</span></li>
+          <li><span>Legacy inspection</span><span class="count">{{ queue_stats.legacy_inspection_queue }}</span></li>
+        </ul>
+        <p class="muted">Run <code>python -m app.workers.worker</code> to process queued work.</p>
+      </div>
+    </section>
+
+    <section class="detail-card">
+      <div class="detail-card-header"><h2>Score / Priority</h2></div>
+      <div class="detail-card-body">
+        <ul class="summary-list">
+          <li><span>High priority</span><span class="count">{{ score_summary.high }}</span></li>
+          <li><span>Medium priority</span><span class="count">{{ score_summary.medium }}</span></li>
+          <li><span>Low priority</span><span class="count">{{ score_summary.low }}</span></li>
+          <li><span>Unscored</span><span class="count">{{ score_summary.unscored }}</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="detail-card">
+      <div class="detail-card-header"><h2>Top Categories</h2></div>
+      <div class="detail-card-body">
+        {% if top_categories %}
+        <ul class="summary-list">
+          {% for row in top_categories %}
+          <li><span>{{ row.name }}</span><span class="count">{{ row.count }}</span></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-state">No category data yet.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="detail-card">
+      <div class="detail-card-header"><h2>Top Cities</h2></div>
+      <div class="detail-card-body">
+        {% if top_cities %}
+        <ul class="summary-list">
+          {% for row in top_cities %}
+          <li><span>{{ row.name }}</span><span class="count">{{ row.count }}</span></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-state">No city data yet.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if outreach_summary.total_drafts > 0 %}
+    <section class="detail-card">
+      <div class="detail-card-header"><h2>Outreach</h2></div>
+      <div class="detail-card-body">
+        <ul class="summary-list">
+          <li><span>Total drafts</span><span class="count">{{ outreach_summary.total_drafts }}</span></li>
+          <li><span>Ready for review</span><span class="count">{{ outreach_summary.ready }}</span></li>
+          <li><span>Reviewed</span><span class="count">{{ outreach_summary.approved }}</span></li>
+        </ul>
+      </div>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

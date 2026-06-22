@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "partials/ui/page_header.html" import page_header %}
+{% from "partials/ui/badge.html" import render_badge %}
+
+{% block title %}Inspection #{{ inspection.id }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+{% call page_header("Inspection #" ~ inspection.id, "Lead: " ~ lead.business_name) %}
+  <a class="btn btn-secondary" href="/inspections">All inspections</a>
+  <a class="btn btn-secondary" href="/leads/{{ lead.id }}">Lead detail</a>
+{% endcall %}
+
+<section class="stat-grid">
+  <article class="stat-card"><span class="stat-card-label">Reachable</span><span class="stat-card-value stat-sm">{{ ui.bool_indicator(inspection.reachable) }}</span></article>
+  <article class="stat-card"><span class="stat-card-label">Social only</span><span class="stat-card-value stat-sm">{{ ui.bool_indicator(inspection.social_only) }}</span></article>
+  <article class="stat-card"><span class="stat-card-label">Branded</span><span class="stat-card-value stat-sm">{{ ui.bool_indicator(inspection.branded_domain) }}</span></article>
+  <article class="stat-card"><span class="stat-card-label">Mobile OK</span><span class="stat-card-value stat-sm">{{ ui.bool_indicator(inspection.mobile_friendly_basic) }}</span></article>
+</section>
+
+<section class="detail-card">
+  <div class="detail-card-header"><h2>Findings Summary</h2></div>
+  <div class="detail-card-body">
+    <dl class="detail-list">
+      <dt>Final URL</dt><dd>{% if inspection.final_url %}<a href="{{ inspection.final_url }}" target="_blank" rel="noopener">{{ inspection.final_url }}</a>{% else %}—{% endif %}</dd>
+      <dt>HTTP status</dt><dd>{{ inspection.http_status or "—" }}</dd>
+      <dt>Website status</dt><dd>{{ render_badge(ui.website_status_badge(lead, inspection)) }}</dd>
+      <dt>SSL (HTTPS)</dt><dd>{{ render_badge(ui.bool_badge(inspection.ssl_present)) }}</dd>
+      <dt>Contact page / CTA</dt><dd>{{ render_badge(ui.bool_badge(inspection.has_contact_page)) }}</dd>
+      <dt>Booking / schedule</dt><dd>{{ render_badge(ui.bool_badge(inspection.has_booking_flow)) }}</dd>
+      <dt>Page title</dt><dd>{{ inspection.page_title or "—" }}</dd>
+      <dt>Meta description</dt><dd>{{ inspection.meta_description or "—" }}</dd>
+      <dt>Inspected at</dt><dd>{{ inspection.inspected_at.strftime("%Y-%m-%d %H:%M") if inspection.inspected_at else "—" }}</dd>
+      {% if inspection.screenshot_path %}<dt>Screenshot</dt><dd><code>{{ inspection.screenshot_path }}</code></dd>{% endif %}
+      {% if inspection.error_message %}<dt>Error</dt><dd class="text-error">{{ inspection.error_message }}</dd>{% endif %}
+    </dl>
+  </div>
+</section>
+
+{% if inspection.findings %}
+<details class="collapsible">
+  <summary>Raw findings JSON</summary>
+  <div class="collapsible-body">
+    <pre class="code-block">{{ inspection.findings | tojson(indent=2) }}</pre>
+  </div>
+</details>
+{% endif %}
+
+<section class="panel">
+  <h2>Actions</h2>
+  <div class="action-row">
+    <form method="post" action="/leads/{{ lead.id }}/inspect" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <button type="submit" class="btn">Re-run inspection</button>
+    </form>
+    <form method="post" action="/leads/{{ lead.id }}/queue-inspection" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <button type="submit" class="btn btn-secondary">Queue inspection</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "partials/ui/page_header.html" import page_header %}
+{% from "partials/ui/badge.html" import render_badge %}
+{% from "partials/ui/empty_state.html" import empty_state %}
+
+{% block title %}Outreach Drafts — {{ app_name }}{% endblock %}
+
+{% block content %}
+{% call page_header("Outreach Drafts", "Review-only message drafts — nothing is sent automatically") %}
+  <a class="btn btn-secondary" href="/leads">Back to Leads</a>
+{% endcall %}
+
+<section class="panel filter-panel">
+  <h2>Filters</h2>
+  <form method="get" action="/outreach" class="form-grid filters-grid">
+    <label>Status
+      <select name="status">
+        <option value="">Any</option>
+        {% for s in draft_statuses %}
+        <option value="{{ s.value }}" {% if filter_status == s.value %}selected{% endif %}>{{ s.value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="form-actions span-all">
+      <button type="submit" class="btn">Apply</button>
+      <a class="btn btn-secondary" href="/outreach">Clear</a>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  {% if drafts %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Business</th>
+          <th>Angle</th>
+          <th>Subject</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for draft in drafts %}
+        {% set lead = draft.business_lead %}
+        <tr>
+          <td>#{{ draft.id }}</td>
+          <td><a href="/leads/{{ lead.id }}">{{ lead.business_name }}</a></td>
+          <td>{{ draft.context.primary_angle_label if draft.context and draft.context.primary_angle_label else (draft.primary_angle or "—") }}</td>
+          <td><span class="truncate" title="{{ draft.subject_line }}">{{ draft.subject_line or "—" }}</span></td>
+          <td>{{ render_badge(ui.outreach_status_badge(draft.status)) }}</td>
+          <td class="muted">{{ draft.created_at.strftime("%Y-%m-%d %H:%M") if draft.created_at else "—" }}</td>
+          <td class="col-actions">
+            <a class="btn btn-sm btn-secondary" href="/outreach/{{ draft.id }}">View</a>
+            <a class="btn btn-sm btn-secondary" href="/leads/{{ lead.id }}">Lead</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty_state("No outreach drafts yet. Generate one from a lead detail page.", "Browse Leads", "/leads") }}
+  {% endif %}
+</section>
+{% endblock %}

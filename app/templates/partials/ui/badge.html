@@ -1,0 +1,5 @@
+{% macro render_badge(badge) %}
+{% if badge %}
+<span class="badge {{ badge.css_class }}">{{ badge.label }}</span>
+{% endif %}
+{% endmacro %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "partials/ui/page_header.html" import page_header %}
+{% from "partials/ui/badge.html" import render_badge %}
+
+{% block title %}Scan #{{ scan.id }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+{% call page_header("Scan #" ~ scan.id, scan.category ~ " in " ~ scan.city ~ (", " ~ scan.state if scan.state else "")) %}
+  <a class="btn btn-secondary" href="/scans">← Back to Scans</a>
+{% endcall %}
+
+<section class="stat-grid">
+  <article class="stat-card"><span class="stat-card-label">Status</span><span class="stat-card-value stat-sm">{{ render_badge(ui.scan_status_badge(scan.status)) }}</span></article>
+  <article class="stat-card"><span class="stat-card-label">Found</span><span class="stat-card-value">{{ scan.total_found }}</span></article>
+  <article class="stat-card"><span class="stat-card-label">Inserted</span><span class="stat-card-value">{{ scan.total_inserted }}</span></article>
+  <article class="stat-card"><span class="stat-card-label">Updated</span><span class="stat-card-value">{{ scan.total_updated }}</span></article>
+  <article class="stat-card"><span class="stat-card-label">Flagged</span><span class="stat-card-value">{{ scan.total_flagged }}</span></article>
+</section>
+
+<section class="detail-card">
+  <div class="detail-card-header"><h2>Job Details</h2></div>
+  <div class="detail-card-body">
+    <dl class="detail-list">
+      <dt>Provider</dt><dd>{{ scan.source_name }}</dd>
+      <dt>Query</dt><dd>{{ scan.query_text or "—" }}</dd>
+      <dt>Started</dt><dd>{{ scan.started_at.strftime("%Y-%m-%d %H:%M") if scan.started_at else "—" }}</dd>
+      <dt>Finished</dt><dd>{{ scan.finished_at.strftime("%Y-%m-%d %H:%M") if scan.finished_at else "—" }}</dd>
+      <dt>Summary</dt><dd>{{ scan.logs_summary or "—" }}</dd>
+      {% if scan.error_message %}<dt>Error</dt><dd class="text-error">{{ scan.error_message }}</dd>{% endif %}
+    </dl>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Leads from this scan ({{ scan.business_leads | length }})</h2>
+  </div>
+  {% if scan.business_leads %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Business</th><th>Phone</th><th>Website</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for lead in scan.business_leads %}
+        <tr>
+          <td>{{ lead.business_name }}</td>
+          <td>{{ lead.phone or "—" }}</td>
+          <td>{% if lead.website_url %}<span class="truncate">{{ lead.website_url }}</span>{% else %}<span class="muted">none</span>{% endif %}</td>
+          <td>{{ lead.status }}</td>
+          <td><a href="/leads/{{ lead.id }}">View</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty-state">No leads linked to this scan.</p>
+  {% endif %}
+</section>
+{% endblock %}

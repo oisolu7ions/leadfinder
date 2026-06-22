@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% from "partials/ui/page_header.html" import page_header %}
+{% from "partials/ui/badge.html" import render_badge %}
+{% from "partials/ui/empty_state.html" import empty_state %}
+
+{% block title %}Inspections — {{ app_name }}{% endblock %}
+
+{% block content %}
+{% call page_header("Inspections", "Operational view of website inspections · Queue: " ~ queue_length) %}
+  <form method="post" action="/leads/inspect-uninspected" class="inline-form">
+    {% include "partials/csrf.html" %}
+    <input type="hidden" name="limit" value="25">
+    <input type="hidden" name="next" value="/inspections">
+    <button type="submit" class="btn">Inspect Unreviewed</button>
+  </form>
+  <a class="btn btn-secondary" href="/leads">Back to Leads</a>
+{% endcall %}
+
+<section class="panel filter-panel">
+  <h2>Filters</h2>
+  <form method="get" action="/inspections" class="form-grid filters-grid">
+    <label>Reachable
+      <select name="reachable">
+        <option value="">Any</option>
+        <option value="yes" {% if insp_filters.reachable == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if insp_filters.reachable == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>Social only
+      <select name="social_only">
+        <option value="">Any</option>
+        <option value="yes" {% if insp_filters.social_only == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if insp_filters.social_only == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>Branded domain
+      <select name="branded_domain">
+        <option value="">Any</option>
+        <option value="yes" {% if insp_filters.branded_domain == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if insp_filters.branded_domain == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>Contact page
+      <select name="has_contact_page">
+        <option value="">Any</option>
+        <option value="yes" {% if insp_filters.has_contact_page == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if insp_filters.has_contact_page == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>Booking flow
+      <select name="has_booking_flow">
+        <option value="">Any</option>
+        <option value="yes" {% if insp_filters.has_booking_flow == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if insp_filters.has_booking_flow == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>SSL
+      <select name="ssl_present">
+        <option value="">Any</option>
+        <option value="yes" {% if insp_filters.ssl_present == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if insp_filters.ssl_present == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>Has error
+      <select name="has_error">
+        <option value="">Any</option>
+        <option value="yes" {% if insp_filters.has_error == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if insp_filters.has_error == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <div class="form-actions span-all">
+      <button type="submit" class="btn">Apply</button>
+      <a class="btn btn-secondary" href="/inspections">Clear</a>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  {% if inspections %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Business</th>
+          <th>Final URL</th>
+          <th>Reachable</th>
+          <th>Website</th>
+          <th>Mobile</th>
+          <th>Contact</th>
+          <th>Booking</th>
+          <th>SSL</th>
+          <th>Inspected At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for insp in inspections %}
+        {% set lead = insp.business_lead %}
+        <tr>
+          <td><a href="/leads/{{ lead.id }}">{{ lead.business_name }}</a></td>
+          <td>{% if insp.final_url %}<span class="truncate" title="{{ insp.final_url }}">{{ insp.final_url }}</span>{% else %}—{% endif %}</td>
+          <td>{{ render_badge(ui.bool_badge(insp.reachable)) }}</td>
+          <td>{{ render_badge(ui.website_status_badge(lead, insp)) }}</td>
+          <td>{{ render_badge(ui.bool_badge(insp.mobile_friendly_basic)) }}</td>
+          <td>{{ render_badge(ui.bool_badge(insp.has_contact_page)) }}</td>
+          <td>{{ render_badge(ui.bool_badge(insp.has_booking_flow)) }}</td>
+          <td>{{ render_badge(ui.bool_badge(insp.ssl_present)) }}</td>
+          <td class="muted">{{ insp.inspected_at.strftime("%Y-%m-%d %H:%M") if insp.inspected_at else "—" }}</td>
+          <td class="col-actions">
+            <a class="btn btn-sm btn-secondary" href="/inspections/{{ insp.id }}">View</a>
+            <a class="btn btn-sm btn-secondary" href="/leads/{{ lead.id }}">Lead</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty_state("No inspections match these filters.", "Inspect from Leads", "/leads") }}
+  {% endif %}
+</section>
+{% endblock %}

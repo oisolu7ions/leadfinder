@@ -1,0 +1,6 @@
+<form method="post" action="{{ action }}" class="inline-form">
+  {% include "partials/csrf.html" %}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  {% if extra %}{{ extra | safe }}{% endif %}
+  <button type="submit" class="btn {{ btn_class or 'btn-sm btn-secondary' }}">{{ label }}</button>
+</form>

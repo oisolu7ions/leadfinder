@@ -1,0 +1,142 @@
+# Production Compose stack for LAN-only internal deployment.
+# Default access: http://<vm-lan-ip>:8000
+# Optional Nginx: docker compose -f docker-compose.prod.yml --profile proxy up -d
+
+name: leadfinder
+
+x-app-image: &app-image
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - .env
+
+x-app-environment: &app-environment
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-leadfinder}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-leadfinder}
+  REDIS_URL: redis://redis:6379/0
+  DATA_DIR: /app/data
+  EXPORT_DIR: /app/data/exports
+  APP_ENV: production
+  DEBUG: "false"
+  LOG_FORMAT: json
+
+x-app-depends: &app-depends
+  db:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-leadfinder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-leadfinder}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-leadfinder} -d ${POSTGRES_DB:-leadfinder}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Bind to localhost only — not required for LAN clients; use for VM admin/debug.
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  migrate:
+    <<: *app-image
+    environment:
+      <<: *app-environment
+    depends_on:
+      <<: *app-depends
+    restart: "no"
+    volumes:
+      - app_data:/app/data
+    entrypoint: ["/bin/sh", "-c", "python scripts/wait_for_dependencies.py && alembic upgrade head"]
+
+  app:
+    <<: *app-image
+    restart: unless-stopped
+    environment:
+      <<: *app-environment
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-1}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-8000}:8000"
+    volumes:
+      - app_data:/app/data
+    entrypoint: ["/app/scripts/entrypoint-app.sh"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    <<: *app-image
+    restart: unless-stopped
+    environment:
+      <<: *app-environment
+      INSPECTION_BROWSER_ENABLED: ${INSPECTION_BROWSER_ENABLED:-false}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - app_data:/app/data
+    entrypoint: ["/app/scripts/entrypoint-worker.sh"]
+
+  scheduler:
+    <<: *app-image
+    restart: unless-stopped
+    environment:
+      <<: *app-environment
+      SCHEDULER_POLL_SECONDS: ${SCHEDULER_POLL_SECONDS:-60}
+    depends_on:
+      app:
+        condition: service_healthy
+    entrypoint: ["/app/scripts/entrypoint-scheduler.sh"]
+
+  nginx:
+    profiles: ["proxy"]
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${NGINX_BIND:-0.0.0.0}:${NGINX_PORT:-80}:80"
+    volumes:
+      - ./deploy/nginx/leadfinder.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+    name: leadfinder_pgdata
+  redis_data:
+    name: leadfinder_redis_data
+  app_data:
+    name: leadfinder_app_data

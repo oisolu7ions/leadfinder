@@ -1,0 +1,8 @@
+{% macro empty_state(message, action_label=None, action_href=None) %}
+<div class="empty-state-block">
+  <p class="empty-state-message">{{ message }}</p>
+  {% if action_label and action_href %}
+  <a class="btn" href="{{ action_href }}">{{ action_label }}</a>
+  {% endif %}
+</div>
+{% endmacro %}

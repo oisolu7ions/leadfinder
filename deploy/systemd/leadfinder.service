@@ -1,0 +1,27 @@
+# Systemd unit — start Leadfinder production stack on boot (Docker Compose).
+#
+# Install:
+#   sudo cp deploy/systemd/leadfinder.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now leadfinder
+#
+# Adjust WorkingDirectory to your checkout path (e.g. /opt/leadfinder).
+
+[Unit]
+Description=Leadfinder internal LAN stack (Docker Compose)
+Documentation=file:///opt/leadfinder/DEPLOYMENT.md
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/leadfinder
+Environment=COMPOSE_FILE=docker-compose.prod.yml
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml down
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

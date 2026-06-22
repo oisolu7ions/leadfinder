@@ -1,0 +1,50 @@
+{% from "partials/ui/badge.html" import render_badge %}
+
+{% macro outreach_draft_card(draft, lead=None, show_actions=true) %}
+<article class="draft-card">
+  <div class="draft-header">
+    <strong>Draft #{{ draft.id }}</strong>
+    {{ render_badge(ui.outreach_status_badge(draft.status)) }}
+    {% if draft.primary_angle %}
+    <span class="badge badge-muted">{{ draft.context.primary_angle_label if draft.context and draft.context.primary_angle_label else draft.primary_angle }}</span>
+    {% endif %}
+    <span class="muted">{{ draft.created_at.strftime("%Y-%m-%d %H:%M") if draft.created_at else "" }}</span>
+  </div>
+
+  {% if draft.context and draft.context.findings_used %}
+  <p class="muted" style="font-size:0.82rem;margin:0 0 0.5rem;">
+    <strong>Why this angle:</strong> {{ draft.context.findings_used | join(" · ") }}
+  </p>
+  {% endif %}
+
+  <p><strong>Subject:</strong> {{ draft.subject_line or "—" }}</p>
+
+  <h3>Email</h3>
+  <pre class="draft-body">{{ draft.email_body or "—" }}</pre>
+
+  <h3>Short DM</h3>
+  <pre class="draft-body">{{ draft.short_dm or "—" }}</pre>
+
+  <h3>Call notes</h3>
+  <pre class="draft-body">{{ draft.call_notes or "—" }}</pre>
+
+  {% if show_actions %}
+  <div class="action-row" style="margin-top:0.75rem;">
+    {% if lead %}
+    <form method="post" action="/leads/{{ lead.id }}/outreach/regenerate" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <button type="submit" class="btn btn-sm btn-secondary">Regenerate</button>
+    </form>
+    {% endif %}
+    {% if draft.status in ('draft_ready', 'draft') %}
+    <form method="post" action="/outreach/drafts/{{ draft.id }}/reviewed" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <input type="hidden" name="next" value="{{ request.url.path }}">
+      <button type="submit" class="btn btn-sm btn-secondary">Mark Reviewed</button>
+    </form>
+    {% endif %}
+    <a class="btn btn-sm btn-secondary" href="/outreach/{{ draft.id }}">Full view</a>
+  </div>
+  {% endif %}
+</article>
+{% endmacro %}

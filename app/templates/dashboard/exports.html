@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% from "partials/ui/page_header.html" import page_header %}
+{% from "partials/ui/badge.html" import render_badge %}
+{% from "partials/ui/empty_state.html" import empty_state %}
+
+{% block title %}Exports — {{ app_name }}{% endblock %}
+
+{% block content %}
+{% call page_header("Exports", "Create CSV snapshots of filtered lead pipeline data") %}
+  <a class="btn btn-secondary" href="/leads">Back to Leads</a>
+{% endcall %}
+
+<section class="panel">
+  <h2>Create Export</h2>
+  <p class="muted">CSV includes lead basics, latest inspection summary, score summary, and outreach draft status.</p>
+  <form method="post" action="/exports/run" class="form-grid filters-grid">
+    {% include "partials/csrf.html" %}
+    <label>Format
+      <select name="format">
+        <option value="csv" selected>CSV</option>
+      </select>
+    </label>
+    <label>Search<input type="text" name="search" value="{{ request.query_params.get('search', '') }}"></label>
+    <label>City<input type="text" name="city" value="{{ request.query_params.get('city', '') }}"></label>
+    <label>State<input type="text" name="state" value="{{ request.query_params.get('state', '') }}"></label>
+    <label>Category<input type="text" name="category" value="{{ request.query_params.get('category', '') }}"></label>
+    <label>Provider<input type="text" name="source_name" value="{{ request.query_params.get('source_name', '') }}"></label>
+    <label>Priority
+      <select name="priority">
+        <option value="">Any</option>
+        <option value="high" {% if request.query_params.get('priority') == 'high' %}selected{% endif %}>High</option>
+        <option value="medium" {% if request.query_params.get('priority') == 'medium' %}selected{% endif %}>Medium</option>
+        <option value="low" {% if request.query_params.get('priority') == 'low' %}selected{% endif %}>Low</option>
+      </select>
+    </label>
+    <label>Lead status
+      <select name="status">
+        <option value="">Any</option>
+        {% for s in lead_statuses %}
+        <option value="{{ s.value }}" {% if request.query_params.get('status') == s.value %}selected{% endif %}>{{ s.value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Has website
+      <select name="has_website">
+        <option value="">Any</option>
+        <option value="yes" {% if request.query_params.get('has_website') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if request.query_params.get('has_website') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>Inspected
+      <select name="inspected">
+        <option value="">Any</option>
+        <option value="yes" {% if request.query_params.get('inspected') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if request.query_params.get('inspected') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>Score social-only
+      <select name="social_only">
+        <option value="">Any</option>
+        <option value="yes" {% if request.query_params.get('social_only') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if request.query_params.get('social_only') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>Min score<input type="number" name="min_score" value="{{ request.query_params.get('min_score', '') }}"></label>
+    <label>Max score<input type="number" name="max_score" value="{{ request.query_params.get('max_score', '') }}"></label>
+    <label>Outreach status
+      <select name="outreach_status">
+        <option value="">Any</option>
+        {% for s in draft_statuses %}
+        <option value="{{ s.value }}" {% if request.query_params.get('outreach_status') == s.value %}selected{% endif %}>{{ s.value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Insp. reachable
+      <select name="insp_reachable">
+        <option value="">Any</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </label>
+    <label>Insp. social only
+      <select name="insp_social_only">
+        <option value="">Any</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </label>
+    <label>Insp. blank website
+      <select name="insp_blank_website">
+        <option value="">Any</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </label>
+    <label>Insp. contact page
+      <select name="insp_has_contact_page">
+        <option value="">Any</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </label>
+    <label>Insp. booking flow
+      <select name="insp_has_booking_flow">
+        <option value="">Any</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </label>
+    <div class="form-actions span-all">
+      <button type="submit" class="btn" name="mode" value="queue">Queue Export</button>
+      <button type="submit" class="btn btn-secondary" name="mode" value="sync">Run Now (sync)</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header"><h2>Export History</h2></div>
+  {% if exports %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Created</th>
+          <th>Format</th>
+          <th>Filters</th>
+          <th>Rows</th>
+          <th>Status</th>
+          <th>File</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in exports %}
+        <tr>
+          <td class="muted">{{ job.created_at.strftime("%Y-%m-%d %H:%M") if job.created_at else "—" }}</td>
+          <td>{{ job.format | upper }}</td>
+          <td><span class="truncate" title="{{ filters_summary(job.filters) }}">{{ filters_summary(job.filters) }}</span></td>
+          <td>{{ job.row_count if job.row_count is not none else "—" }}</td>
+          <td>{{ render_badge(ui.scan_status_badge(job.status)) }}</td>
+          <td>{% if job.file_path %}<code class="truncate">{{ job.file_path.split('/')[-1] }}</code>{% else %}—{% endif %}</td>
+          <td class="col-actions">
+            {% if job.status == 'completed' and job.file_path %}
+            <a class="btn btn-sm btn-secondary" href="/exports/download/{{ job.id }}">Download</a>
+            {% elif job.error_message %}
+            <span class="text-error truncate" title="{{ job.error_message }}">Failed</span>
+            {% endif %}
+            <a class="btn btn-sm btn-secondary" href="/exports/{{ job.id }}">Details</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty_state("No exports yet. Create one using the form above.") }}
+  {% endif %}
+</section>
+{% endblock %}

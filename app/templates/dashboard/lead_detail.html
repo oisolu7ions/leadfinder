@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% from "partials/ui/badge.html" import render_badge %}
+{% from "partials/ui/empty_state.html" import empty_state %}
+{% from "leads/partials/outreach_draft_card.html" import outreach_draft_card %}
+{% from "leads/partials/score_badge.html" import score_badge %}
+
+{% block title %}{{ lead.business_name }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="lead-hero">
+  <div class="lead-hero-top">
+    <div>
+      <h1>{{ lead.business_name }}</h1>
+      <p class="subtitle">{{ lead.category or "Uncategorized" }} · {{ lead.city or "Unknown" }}{% if lead.state %}, {{ lead.state }}{% endif %}</p>
+      <div class="lead-meta">
+        {{ render_badge(ui.website_status_badge(lead, inspection)) }}
+        {{ render_badge(ui.inspection_status_badge(lead, inspection)) }}
+        {% if score %}{{ render_badge(ui.priority_tier_badge(score)) }}{% endif %}
+        <span class="badge badge-muted">{{ lead.status }}</span>
+      </div>
+    </div>
+    <div class="action-row">
+      <a class="btn btn-secondary" href="/leads">← Back to Leads</a>
+    </div>
+  </div>
+  <div class="lead-hero-stats">
+    <div class="lead-stat">
+      <span class="lead-stat-label">Score</span>
+      <span class="lead-stat-value">{% if score %}{{ score.total_score }}{% else %}—{% endif %}</span>
+    </div>
+    <div class="lead-stat">
+      <span class="lead-stat-label">Priority</span>
+      <span class="lead-stat-value">{% if priority_label %}{{ priority_label }}{% else %}—{% endif %}</span>
+    </div>
+    <div class="lead-stat">
+      <span class="lead-stat-label">Phone</span>
+      <span class="lead-stat-value stat-sm">{{ lead.phone or "—" }}</span>
+    </div>
+    <div class="lead-stat">
+      <span class="lead-stat-label">Provider</span>
+      <span class="lead-stat-value stat-sm">{{ lead.source_name }}</span>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Actions</h2>
+  <p class="muted">Inspection queue: {{ queue_length }} pending</p>
+  <div class="action-row">
+    <form method="post" action="/leads/{{ lead.id }}/inspect" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <button type="submit" class="btn">Inspect Lead</button>
+    </form>
+    <form method="post" action="/leads/{{ lead.id }}/inspect" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <button type="submit" class="btn btn-secondary">Reinspect Lead</button>
+    </form>
+    <form method="post" action="/leads/{{ lead.id }}/queue-inspection" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <button type="submit" class="btn btn-secondary">Queue Inspection</button>
+    </form>
+    <form method="post" action="/leads/{{ lead.id }}/score" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <button type="submit" class="btn btn-secondary">Score Lead</button>
+    </form>
+    <form method="post" action="/leads/{{ lead.id }}/rescore" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <button type="submit" class="btn btn-secondary">Rescore Lead</button>
+    </form>
+    <form method="post" action="/leads/{{ lead.id }}/outreach" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <button type="submit" class="btn btn-secondary">Generate Draft</button>
+    </form>
+    <form method="post" action="/leads/{{ lead.id }}/outreach/regenerate" class="inline-form">
+      {% include "partials/csrf.html" %}
+      <button type="submit" class="btn btn-secondary">Regenerate Draft</button>
+    </form>
+  </div>
+</section>
+
+<div class="layout-detail">
+  <div>
+    <section class="detail-card">
+      <div class="detail-card-header"><h2>Lead Overview</h2></div>
+      <div class="detail-card-body">
+        <dl class="detail-list detail-list-compact">
+          <dt>Email</dt><dd>{{ lead.email or "—" }}</dd>
+          <dt>Address</dt><dd>{{ lead.address_line1 or "—" }}</dd>
+          <dt>City / State / ZIP</dt><dd>{{ lead.city or "—" }}{% if lead.state %}, {{ lead.state }}{% endif %} {{ lead.postal_code or "" }}</dd>
+          <dt>Website</dt><dd>{% if lead.website_url %}<a href="{{ lead.website_url }}" target="_blank" rel="noopener">{{ lead.website_url }}</a>{% else %}<span class="muted">none</span>{% endif %}</dd>
+          <dt>Domain</dt><dd>{{ lead.normalized_domain or "—" }}</dd>
+          <dt>Updated</dt><dd>{{ lead.updated_at.strftime("%Y-%m-%d %H:%M") if lead.updated_at else "—" }}</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="detail-card">
+      <div class="detail-card-header">
+        <h2>Website Findings Summary</h2>
+        {% if inspection %}<a class="detail-card-link" href="/inspections/{{ inspection.id }}">Full inspection →</a>{% endif %}
+      </div>
+      <div class="detail-card-body">
+        {% if inspection %}
+        <dl class="detail-list detail-list-compact">
+          <dt>Final URL</dt><dd>{% if inspection.final_url %}<a href="{{ inspection.final_url }}" target="_blank" rel="noopener" class="truncate">{{ inspection.final_url }}</a>{% else %}—{% endif %}</dd>
+          <dt>Reachable</dt><dd>{{ render_badge(ui.bool_badge(inspection.reachable)) }}</dd>
+          <dt>Social only</dt><dd>{{ render_badge(ui.bool_badge(inspection.social_only)) }}</dd>
+          <dt>Branded domain</dt><dd>{{ render_badge(ui.bool_badge(inspection.branded_domain)) }}</dd>
+          <dt>Mobile friendly</dt><dd>{{ render_badge(ui.bool_badge(inspection.mobile_friendly_basic)) }}</dd>
+          <dt>Contact page</dt><dd>{{ render_badge(ui.bool_badge(inspection.has_contact_page)) }}</dd>
+          <dt>Booking flow</dt><dd>{{ render_badge(ui.bool_badge(inspection.has_booking_flow)) }}</dd>
+          <dt>SSL</dt><dd>{{ render_badge(ui.bool_badge(inspection.ssl_present)) }}</dd>
+          <dt>Page title</dt><dd>{{ inspection.page_title or "—" }}</dd>
+          {% if inspection.error_message %}<dt>Error</dt><dd class="text-error">{{ inspection.error_message }}</dd>{% endif %}
+        </dl>
+        {% else %}
+        <p class="empty-state">Not inspected yet. Run an inspection to analyze web presence.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="detail-card">
+      <div class="detail-card-header"><h2>Source / Traceability</h2></div>
+      <div class="detail-card-body">
+        <dl class="detail-list detail-list-compact">
+          <dt>Provider</dt><dd>{{ lead.source_name }}</dd>
+          <dt>External ID</dt><dd>{{ lead.external_id or "—" }}</dd>
+          <dt>Scan job</dt><dd>{% if lead.scan_job_id %}<a href="/scans/{{ lead.scan_job_id }}">#{{ lead.scan_job_id }}</a>{% else %}—{% endif %}</dd>
+          <dt>Notes</dt><dd>{{ lead.notes or "—" }}</dd>
+        </dl>
+        {% if inspection and inspection.findings %}
+        <details class="collapsible">
+          <summary>Raw inspection findings JSON</summary>
+          <div class="collapsible-body">
+            <pre class="code-block">{{ inspection.findings | tojson(indent=2) }}</pre>
+          </div>
+        </details>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <aside>
+    <section class="detail-card">
+      <div class="detail-card-header"><h2>Lead Score</h2></div>
+      <div class="detail-card-body">
+        {% if score %}
+        <p>{{ score_badge(score, priority_label) }}</p>
+        <dl class="detail-list detail-list-compact">
+          <dt>No website</dt><dd>{{ score.no_website_score }}</dd>
+          <dt>Social only</dt><dd>{{ score.social_only_score }}</dd>
+          <dt>Branding</dt><dd>{{ score.branding_score }}</dd>
+          <dt>Reachability</dt><dd>{{ score.reachability_score }}</dd>
+          <dt>SSL</dt><dd>{{ score.ssl_score }}</dd>
+          <dt>Mobile</dt><dd>{{ score.mobile_score }}</dd>
+          <dt>Contact / booking</dt><dd>{{ score.contact_flow_score }}</dd>
+          <dt>Weak / outdated</dt><dd>{{ score.outdated_website_score }}</dd>
+        </dl>
+        {% if score.breakdown and score.breakdown.factors %}
+        <h3 style="font-size:0.85rem;margin:0.75rem 0 0.35rem;">Score breakdown</h3>
+        <table class="data-table">
+          <thead><tr><th>Signal</th><th>Pts</th></tr></thead>
+          <tbody>
+            {% for factor in score.breakdown.factors %}
+            {% if factor.points > 0 %}
+            <tr><td title="{{ factor.detail }}">{{ factor.signal }}</td><td><strong>+{{ factor.points }}</strong></td></tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+        {% if score.notes %}
+        <details class="collapsible">
+          <summary>Explanation</summary>
+          <div class="collapsible-body"><pre class="code-block">{{ score.notes }}</pre></div>
+        </details>
+        {% endif %}
+        {% else %}
+        <p class="empty-state">Not scored yet.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="detail-card">
+      <div class="detail-card-header"><h2>Latest Inspection</h2></div>
+      <div class="detail-card-body">
+        {% if inspection %}
+        <dl class="detail-list detail-list-compact">
+          <dt>Inspected</dt><dd>{{ inspection.inspected_at.strftime("%Y-%m-%d %H:%M") if inspection.inspected_at else "—" }}</dd>
+          <dt>HTTP status</dt><dd>{{ inspection.http_status or "—" }}</dd>
+          <dt>Meta description</dt><dd>{{ inspection.meta_description or "—" }}</dd>
+        </dl>
+        <a href="/inspections/{{ inspection.id }}">View inspection detail →</a>
+        {% else %}
+        <p class="empty-state">No inspection on file.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="detail-card">
+      <div class="detail-card-header">
+        <h2>Outreach Draft</h2>
+        {% if latest_draft %}<a class="detail-card-link" href="/outreach/{{ latest_draft.id }}">Full draft →</a>{% endif %}
+      </div>
+      <div class="detail-card-body">
+        {% if latest_draft %}
+        {{ outreach_draft_card(latest_draft, lead, show_actions=false) }}
+        {% else %}
+        <p class="empty-state">No draft yet. Use Generate Draft above — review only, never auto-sent.</p>
+        {% endif %}
+      </div>
+    </section>
+  </aside>
+</div>
+
+{% if inspection_history and inspection_history|length > 1 %}
+<section class="panel">
+  <h2>Inspection History</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>ID</th><th>When</th><th>Reachable</th><th>Social</th><th></th></tr></thead>
+      <tbody>
+        {% for insp in inspection_history %}
+        <tr>
+          <td>#{{ insp.id }}</td>
+          <td>{{ insp.inspected_at.strftime("%Y-%m-%d %H:%M") if insp.inspected_at else "—" }}</td>
+          <td>{{ ui.bool_indicator(insp.reachable) }}</td>
+          <td>{{ ui.bool_indicator(insp.social_only) }}</td>
+          <td><a href="/inspections/{{ insp.id }}">View</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if draft_history and draft_history|length > 1 %}
+<section class="panel">
+  <h2>Draft History</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>ID</th><th>When</th><th>Angle</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for d in draft_history %}
+        <tr>
+          <td>#{{ d.id }}</td>
+          <td>{{ d.created_at.strftime("%Y-%m-%d %H:%M") if d.created_at else "—" }}</td>
+          <td>{{ d.primary_angle or "—" }}</td>
+          <td>{{ render_badge(ui.outreach_status_badge(d.status)) }}</td>
+          <td><a href="/outreach/{{ d.id }}">View</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

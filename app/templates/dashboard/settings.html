@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "partials/ui/page_header.html" import page_header %}
+{% from "partials/ui/badge.html" import render_badge %}
+{% from "partials/ui/empty_state.html" import empty_state %}
+
+{% block title %}Settings — {{ app_name }}{% endblock %}
+
+{% block content %}
+{% call page_header("Settings", "Internal operational configuration (no secrets exposed)") %}{% endcall %}
+
+<section class="detail-card">
+  <div class="detail-card-header"><h2>Environment</h2></div>
+  <div class="detail-card-body">
+    <dl class="settings-grid">
+      <dt>Application</dt><dd>{{ settings.app_name }}</dd>
+      <dt>Environment</dt><dd><span class="badge badge-muted">{{ settings.app_env }}</span></dd>
+      <dt>Debug mode</dt><dd>{{ render_badge(ui.bool_badge(settings.debug, yes="Enabled", no="Disabled")) }}</dd>
+      <dt>Version</dt><dd>{{ version }}</dd>
+    </dl>
+  </div>
+</section>
+
+<section class="detail-card">
+  <div class="detail-card-header"><h2>Inspection</h2></div>
+  <div class="detail-card-body">
+    <dl class="settings-grid">
+      <dt>Browser inspection</dt><dd>{{ render_badge(ui.bool_badge(settings.inspection_browser_enabled, yes="Enabled", no="Disabled")) }}</dd>
+      <dt>Browser concurrency</dt><dd>{{ settings.inspection_browser_concurrency }}</dd>
+      <dt>HTTP timeout</dt><dd>{{ settings.inspection_timeout_seconds }}s</dd>
+      <dt>Save artifacts</dt><dd>{{ render_badge(ui.bool_badge(settings.inspection_save_artifacts)) }}</dd>
+      <dt>Job queue</dt><dd><code>{{ settings.job_queue_name }}</code></dd>
+      <dt>Queue length</dt><dd>{{ queue_stats.total }} (unified: {{ queue_stats.unified_queue }}, legacy: {{ queue_stats.legacy_inspection_queue }})</dd>
+      <dt>Max job retries</dt><dd>{{ settings.job_max_retries }}</dd>
+      <dt>Worker poll</dt><dd>{{ settings.worker_poll_seconds }}s</dd>
+      <dt>Scheduler poll</dt><dd>{{ settings.scheduler_poll_seconds }}s</dd>
+      <dt>TomTom live provider</dt><dd>{{ render_badge(ui.bool_badge(settings.tomtom_enabled and settings.tomtom_api_key, yes="Enabled", no="Disabled")) }}</dd>
+      <dt>API key configured</dt><dd>{{ render_badge(ui.bool_badge(settings.tomtom_api_key, yes="Yes", no="No")) }}</dd>
+    </dl>
+  </div>
+</section>
+
+<section class="detail-card">
+  <div class="detail-card-header"><h2>Storage & Workers</h2></div>
+  <div class="detail-card-body">
+    <dl class="settings-grid">
+      <dt>Data directory</dt><dd><code>{{ settings.data_dir }}</code></dd>
+      <dt>Export directory</dt><dd><code>{{ settings.export_dir }}</code></dd>
+      <dt>Screenshots</dt><dd><code>{{ settings.screenshots_dir }}</code></dd>
+      <dt>Worker concurrency</dt><dd>{{ settings.worker_concurrency }}</dd>
+    </dl>
+  </div>
+</section>
+
+<section class="detail-card">
+  <div class="detail-card-header"><h2>Providers</h2></div>
+  <div class="detail-card-body">
+    {% if providers %}
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Display name</th><th>Live</th></tr></thead>
+      <tbody>
+        {% for p in providers %}
+        <tr>
+          <td><code>{{ p.name }}</code></td>
+          <td>{{ p.display_name }}</td>
+          <td>{{ render_badge(ui.bool_badge(p.is_live, yes="Yes", no="No")) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">No providers registered.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

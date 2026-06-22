@@ -1,0 +1,12 @@
+{% macro score_badge(score, priority_label=None) %}
+{% if score %}
+<span class="score-badge score-priority-{{ score.breakdown.priority_tier if score.breakdown and score.breakdown.priority_tier else 'unknown' }}">
+  {{ score.total_score }}
+  {% if priority_label or (score.breakdown and score.breakdown.priority_label) %}
+  <span class="score-priority-label">{{ priority_label or score.breakdown.priority_label }}</span>
+  {% endif %}
+</span>
+{% else %}
+<span class="muted">—</span>
+{% endif %}
+{% endmacro %}

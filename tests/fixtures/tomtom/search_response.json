@@ -1,0 +1,48 @@
+{
+  "summary": {
+    "query": "barbers",
+    "queryType": "NON_NEAR",
+    "totalResults": 2
+  },
+  "results": [
+    {
+      "type": "POI",
+      "id": "US/POI/p0/barber-one-charlotte",
+      "score": 9.5,
+      "poi": {
+        "name": "Charlotte Barber One",
+        "phone": "+1 704-555-0101",
+        "categories": ["barber shop"],
+        "url": "https://charlottebarberone.example.com"
+      },
+      "address": {
+        "streetNumber": "101",
+        "streetName": "Main St",
+        "municipality": "Charlotte",
+        "countrySubdivision": "NC",
+        "postalCode": "28202",
+        "countryCode": "US"
+      },
+      "position": {"lat": 35.228, "lon": -80.844}
+    },
+    {
+      "type": "POI",
+      "id": "US/POI/p0/queen-city-cuts",
+      "score": 8.9,
+      "poi": {
+        "name": "Queen City Cuts",
+        "phone": "+1 704-555-0102",
+        "categories": ["hair salon"]
+      },
+      "address": {
+        "streetNumber": "202",
+        "streetName": "Oak Ave",
+        "municipality": "charlotte",
+        "countrySubdivision": "nc",
+        "postalCode": "28202",
+        "countryCode": "US"
+      },
+      "position": {"lat": 35.229, "lon": -80.845}
+    }
+  ]
+}

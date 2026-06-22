@@ -1,0 +1,113 @@
+# Development Compose — hot reload, source bind mount.
+# For LAN production deployment use docker-compose.prod.yml (see DEPLOYMENT.md).
+
+name: leadfinder-dev
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: leadfinder
+      POSTGRES_PASSWORD: leadfinder
+      POSTGRES_DB: leadfinder
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leadfinder -d leadfinder"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://leadfinder:leadfinder@db:5432/leadfinder
+      REDIS_URL: redis://redis:6379/0
+      UVICORN_RELOAD: "true"
+      APP_ENV: development
+      DEBUG: "true"
+    volumes:
+      - .:/app
+      - app_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    entrypoint: ["/app/scripts/entrypoint-app.sh"]
+
+  worker:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://leadfinder:leadfinder@db:5432/leadfinder
+      REDIS_URL: redis://redis:6379/0
+      INSPECTION_BROWSER_ENABLED: "false"
+      WORKER_CONCURRENCY: "1"
+    volumes:
+      - .:/app
+      - app_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    entrypoint: ["/app/scripts/entrypoint-worker.sh"]
+
+  scheduler:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://leadfinder:leadfinder@db:5432/leadfinder
+      REDIS_URL: redis://redis:6379/0
+      SCHEDULER_POLL_SECONDS: "60"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    entrypoint: ["/app/scripts/entrypoint-scheduler.sh"]
+
+  inspection-worker:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://leadfinder:leadfinder@db:5432/leadfinder
+      REDIS_URL: redis://redis:6379/0
+      INSPECTION_BROWSER_ENABLED: "false"
+    volumes:
+      - .:/app
+      - app_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    entrypoint: ["/app/scripts/entrypoint-worker.sh"]
+    profiles:
+      - legacy
+
+volumes:
+  pgdata:
+  app_data:

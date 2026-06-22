@@ -1,0 +1,11 @@
+{% macro stat_card(label, value, hint=None, href=None) %}
+<article class="stat-card">
+  <span class="stat-card-label">{{ label }}</span>
+  {% if href %}
+  <a href="{{ href }}" class="stat-card-value stat-card-link">{{ value }}</a>
+  {% else %}
+  <span class="stat-card-value">{{ value }}</span>
+  {% endif %}
+  {% if hint %}<span class="stat-card-hint">{{ hint }}</span>{% endif %}
+</article>
+{% endmacro %}

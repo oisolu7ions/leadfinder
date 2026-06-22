@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ app_name | default("Leadfinder") }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="app-shell">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/" class="brand">
+          <span>{{ app_name | default("Leadfinder") }}</span>
+          <span class="brand-tagline">OIS Lead Discovery</span>
+        </a>
+        <nav class="main-nav">
+          <a href="/" class="{% if active_nav == 'home' %}nav-active{% endif %}">Dashboard</a>
+          <a href="/leads" class="{% if active_nav == 'leads' %}nav-active{% endif %}">Leads</a>
+          <a href="/scans" class="{% if active_nav == 'scans' %}nav-active{% endif %}">Scans</a>
+          <a href="/inspections" class="{% if active_nav == 'inspections' %}nav-active{% endif %}">Inspections</a>
+          <a href="/outreach" class="{% if active_nav == 'outreach' %}nav-active{% endif %}">Drafts</a>
+          <a href="/exports" class="{% if active_nav == 'exports' %}nav-active{% endif %}">Exports</a>
+          <a href="/schedules" class="{% if active_nav == 'schedules' %}nav-active{% endif %}">Schedules</a>
+          <a href="/settings" class="{% if active_nav == 'settings' %}nav-active{% endif %}">Settings</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <div class="container">
+        {% include "partials/flash.html" %}
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <span>OIS Lead Discovery Platform</span>
+        {% if version %}<span class="muted">v{{ version }}</span>{% endif %}
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

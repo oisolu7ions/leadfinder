@@ -1,0 +1,32 @@
+# Virtualenv and caches
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.pyc
+
+# Runtime data (mounted as volumes in production)
+data/
+exports/
+
+# Secrets and local env
+.env
+.env.local
+.env.*.local
+
+# Git and IDE
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# Docs and dev-only (not needed in image)
+htmlcov/
+.coverage
+playwright-report/
+test-results/
+
+# Keep tests out of production image to reduce size
+tests/

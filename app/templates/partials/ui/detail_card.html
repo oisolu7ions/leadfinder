@@ -1,0 +1,13 @@
+{% macro detail_card(title, link_label=None, link_href=None) %}
+<section class="detail-card">
+  <div class="detail-card-header">
+    <h2>{{ title }}</h2>
+    {% if link_label and link_href %}
+    <a href="{{ link_href }}" class="detail-card-link">{{ link_label }}</a>
+    {% endif %}
+  </div>
+  <div class="detail-card-body">
+    {{ caller() }}
+  </div>
+</section>
+{% endmacro %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "partials/ui/page_header.html" import page_header %}
+{% from "partials/ui/badge.html" import render_badge %}
+{% from "partials/ui/empty_state.html" import empty_state %}
+
+{% block title %}Schedules — {{ app_name }}{% endblock %}
+
+{% block content %}
+{% call page_header("Scheduled Tasks", "Recurring background jobs — requires scheduler process") %}
+  <a class="btn btn-secondary" href="/settings">Settings</a>
+{% endcall %}
+
+<section class="panel">
+  <h2>Create Schedule</h2>
+  <p class="muted">Schedules enqueue real jobs when due. Run <code>python -m app.scheduler.runner</code> alongside the worker.</p>
+  <form method="post" action="/schedules/create" class="form-grid">
+    {% include "partials/csrf.html" %}
+    <label>Name<input type="text" name="name" required placeholder="Daily Austin dentist scan"></label>
+    <label>Task type
+      <select name="task_type" id="task-type-select">
+        {% for tt in task_types %}
+        <option value="{{ tt.value }}">{{ tt.value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Interval (minutes)<input type="number" name="interval_minutes" value="1440" min="5" max="10080"></label>
+    <label>Category (scan)<input type="text" name="category" placeholder="dentist"></label>
+    <label>City (scan)<input type="text" name="city" placeholder="Austin"></label>
+    <label>State<input type="text" name="state" placeholder="TX"></label>
+    <label>Provider
+      <select name="source_name">
+        {% for provider in providers %}
+        <option value="{{ provider.name }}">{{ provider.display_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Limit<input type="number" name="limit" value="50" min="1" max="500"></label>
+    <label>Uninspected limit (inspect)<input type="number" name="uninspected_limit" value="25" min="1" max="500"></label>
+    <div class="form-actions span-all">
+      <button type="submit" class="btn">Create Schedule</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header"><h2>Active Schedules</h2></div>
+  {% if schedules %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Interval</th>
+          <th>Enabled</th>
+          <th>Last run</th>
+          <th>Next run</th>
+          <th>Last status</th>
+          <th>Error</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in schedules %}
+        <tr>
+          <td>{{ task.name }}</td>
+          <td><code>{{ task.task_type }}</code></td>
+          <td>{{ task.interval_minutes }} min</td>
+          <td>{{ render_badge(ui.bool_badge(task.enabled)) }}</td>
+          <td class="muted">{{ task.last_run_at.strftime("%Y-%m-%d %H:%M") if task.last_run_at else "—" }}</td>
+          <td class="muted">{{ task.next_run_at.strftime("%Y-%m-%d %H:%M") if task.next_run_at else "—" }}</td>
+          <td>{% if task.last_status %}{{ render_badge({"label": task.last_status, "tone": "muted"}) }}{% else %}—{% endif %}</td>
+          <td>{% if task.last_error %}<span class="text-error truncate" title="{{ task.last_error }}">yes</span>{% else %}—{% endif %}</td>
+          <td>
+            <form method="post" action="/schedules/{{ task.id }}/toggle" class="inline-form">
+              {% include "partials/csrf.html" %}
+              <input type="hidden" name="enabled" value="{{ 'false' if task.enabled else 'true' }}">
+              <button type="submit" class="btn btn-sm btn-secondary">{{ "Disable" if task.enabled else "Enable" }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty_state("No scheduled tasks yet. Create one above or use the API at POST /api/background/schedules.") }}
+  {% endif %}
+</section>
+{% endblock %}
