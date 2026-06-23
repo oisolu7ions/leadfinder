@@ -101,20 +101,21 @@
 
 <section class="panel">
   {% if result.leads %}
+  <p class="table-scroll-hint">Swipe horizontally for more columns</p>
   <div class="table-wrap">
     <table class="data-table">
       <thead>
         <tr>
           <th>Business</th>
           <th>City</th>
-          <th>State</th>
-          <th>Category</th>
+          <th class="hide-mobile">State</th>
+          <th class="hide-mobile">Category</th>
           <th>Website</th>
           <th>Inspection</th>
           <th>Score</th>
           <th>Priority</th>
-          <th>Outreach</th>
-          <th>Updated</th>
+          <th class="hide-mobile">Outreach</th>
+          <th class="hide-mobile">Updated</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -124,16 +125,16 @@
         {% set insp = latest_inspection(lead) %}
         {% set draft = lead.outreach_drafts[0] if lead.outreach_drafts else none %}
         <tr>
-          <td><a href="/leads/{{ lead.id }}">{{ lead.business_name }}</a></td>
+          <td class="col-primary"><a href="/leads/{{ lead.id }}">{{ lead.business_name }}</a></td>
           <td>{{ lead.city or "—" }}</td>
-          <td>{{ lead.state or "—" }}</td>
-          <td>{{ lead.category or "—" }}</td>
+          <td class="hide-mobile">{{ lead.state or "—" }}</td>
+          <td class="hide-mobile">{{ lead.category or "—" }}</td>
           <td>{{ render_badge(ui.website_status_badge(lead, insp)) }}</td>
           <td>{{ render_badge(ui.inspection_status_badge(lead, insp)) }}</td>
           <td>{{ score_badge(score) }}</td>
           <td>{% if score %}{{ render_badge(ui.priority_tier_badge(score)) }}{% else %}<span class="muted">—</span>{% endif %}</td>
-          <td>{% if draft %}{{ render_badge(ui.outreach_status_badge(draft.status)) }}{% else %}<span class="muted">—</span>{% endif %}</td>
-          <td class="muted">{{ lead.updated_at.strftime("%Y-%m-%d") if lead.updated_at else "—" }}</td>
+          <td class="hide-mobile">{% if draft %}{{ render_badge(ui.outreach_status_badge(draft.status)) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td class="hide-mobile muted">{{ lead.updated_at.strftime("%Y-%m-%d") if lead.updated_at else "—" }}</td>
           <td class="col-actions">
             <a class="btn btn-sm btn-secondary" href="/leads/{{ lead.id }}">View</a>
             <form method="post" action="/leads/{{ lead.id }}/inspect" class="inline-form">
